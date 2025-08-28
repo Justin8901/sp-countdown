@@ -1,225 +1,219 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Countdown</title>
-  <style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Countdown</title>
+<style>
+  :root{
+    --border: rgba(0,0,0,.15);
+    --text: #000000;
+    --neon-yellow: #FFEE00;
+    --neon-orange: #FF6A00;
+    --neon-red:    #FF0033;
+  }
+  @media (prefers-color-scheme: dark){
     :root{
-      --border:#e5e7eb; --text:#111827; --muted:#6b7280; --ok:#111827;
-      --warn:#f59e0b; --orange:#f97316; --danger:#dc2626; --bg:#ffffff;
+      --border: rgba(255,255,255,.18);
+      --text: #eaeaea;
+      /* keep same neons for punch */
     }
-    @media (prefers-color-scheme: dark){
-      :root{ --border:#374151; --text:#f3f4f6; --muted:#9ca3af; --ok:#f3f4f6;
-             --warn:#f59e0b; --orange:#fb923c; --danger:#f87171; --bg:#111827; }
-    }
+  }
 
-    html,body{
-      margin:0;
-      background:transparent;        /* keep iframe background invisible */
-      color:var(--text);
-      font-family: ui-sans-serif, system-ui, "Segoe UI", Arial;
-      display:flex; align-items:center; justify-content:center; /* center the card */
-      min-height:1px;
-    }
+  html,body{
+    margin:0;
+    background:transparent;               /* blank page background */
+    color:var(--text);
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Arial;
+    display:flex; align-items:center; justify-content:center;
+    min-height:1px;
+  }
 
-    .card{
-      display:inline-block;
-      padding:12px;
-      border:1px solid var(--border);
-      border-radius:14px;
-      box-shadow:0 1px 2px rgba(0,0,0,.06);
-      background:#fff;               /* give the card a surface so blink is visible */
-    }
-    @media (prefers-color-scheme: dark){
-      .card{ background:#0b1220; }   /* subtle dark card */
-    }
+  /* Card is transparent; border is subtle so it fits your SharePoint box nicely */
+  .card{
+    display:inline-block;
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:transparent;               /* no fill until flash */
+    transition: background .2s ease, box-shadow .2s ease;
+  }
 
-    .row{display:flex; align-items:center; justify-content:space-between; gap:12px;}
-    .title{display:none}             /* hide the old label completely */
-    .time{font-size:44px; font-weight:800; letter-spacing:.5px}
-    .status{font-size:12px; color:var(--muted); margin-top:4px}
-    .btn{padding:8px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer}
-    .btn-danger{
-      background:var(--danger); color:#fff; border-color:var(--danger);
-    }
-    .btn-danger:hover{ filter:brightness(0.92); }
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  .time{font-size:44px; font-weight:800; letter-spacing:.5px; color:#000;}  /* starts black */
+  .status{font-size:12px; color:#666; margin-top:4px}
+  .btn{
+    padding:8px 12px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--neon-red); background:var(--neon-red); color:#fff;
+  }
+  .btn:hover{ filter:brightness(.92); }
 
-    .bar{height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-top:12px; border:1px solid var(--border)}
-    .bar>div{height:100%; width:0%}
+  .bar{height:8px; background:rgba(0,0,0,.08); border-radius:999px; overflow:hidden; margin-top:12px; border:1px solid var(--border)}
+  .bar>div{height:100%; width:0%; background:#000}
 
-    /* Blink the whole card during the last minute */
-    @keyframes card-blink {
-      0%   { background:#fff;    box-shadow:0 0 0 0 rgba(220,38,38,.0); }
-      50%  { background:#ffe5e5; box-shadow:0 0 0 4px rgba(220,38,38,.25); }
-      100% { background:#fff;    box-shadow:0 0 0 0 rgba(220,38,38,.0); }
-    }
-    @media (prefers-color-scheme: dark){
-      @keyframes card-blink {
-        0%   { background:#0b1220; box-shadow:0 0 0 0 rgba(248,113,113,.0); }
-        50%  { background:#251016; box-shadow:0 0 0 4px rgba(248,113,113,.35); }
-        100% { background:#0b1220; box-shadow:0 0 0 0 rgba(248,113,113,.0); }
-      }
-    }
-    .blink {
-      animation: card-blink 1s linear infinite;
-      border-color: var(--danger) !important;
-    }
-  </style>
+  /* Intense neon glow helpers (applied from JS) */
+  .glow-yellow{ text-shadow: 0 0 6px var(--neon-yellow), 0 0 14px var(--neon-yellow), 0 0 24px rgba(255,238,0,.8); }
+  .glow-orange{ text-shadow: 0 0 6px var(--neon-orange), 0 0 14px var(--neon-orange), 0 0 24px rgba(255,106,0,.8); }
+  .glow-red{    text-shadow: 0 0 6px var(--neon-red),    0 0 16px var(--neon-red),    0 0 28px rgba(255,0,51,.9); }
+
+  /* Violent red flash last minute */
+  @keyframes flash-red {
+    0%   { background: transparent; box-shadow: 0 0 0 0 rgba(255,0,51,0); }
+    50%  { background: rgba(255,0,51,0.85); box-shadow: 0 0 30px 10px rgba(255,0,51,0.75); }
+    100% { background: transparent; box-shadow: 0 0 0 0 rgba(255,0,51,0); }
+  }
+  .blink { animation: flash-red 0.9s linear infinite; border-color: var(--neon-red) !important; }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .blink { animation: none; background: rgba(255,0,51,0.85); box-shadow: 0 0 18px 6px rgba(255,0,51,0.65); }
+  }
+</style>
 </head>
 <body>
   <div class="card" id="card">
     <div class="row">
       <div>
-        <!-- Title intentionally removed -->
         <div id="display" class="time">10:00</div>
         <div id="status" class="status">Running</div>
       </div>
       <div style="display:flex; gap:8px">
-        <button id="restart" class="btn btn-danger">Restart</button>
+        <button id="restart" class="btn">Restart</button>
       </div>
     </div>
     <div class="bar" aria-hidden="true"><div id="barfill"></div></div>
   </div>
 
-  <script>
-  (function () {
-    // --------- Config via URL params ----------
-    // ?m=10   -> minutes (default 10)
-    // ?s=600  -> OR total seconds (overrides minutes if present)
-    // ?warn=1 -> (kept for compatibility; not used for colour now)
-    // ?beep=1 -> play a short beep at end (default 1)
-    const params = new URLSearchParams(location.search);
-    const m = parseInt(params.get('m') || '10', 10);
-    const sOverride = parseInt(params.get('s') || '0', 10);
-    const totalSeconds = Number.isFinite(sOverride) && sOverride > 0 ? sOverride : m * 60;
-    const doBeep = (params.get('beep') ?? '1') !== '0';
+<script>
+(function () {
+  // URL params: ?m=10 (minutes) or ?s=600 (seconds), ?beep=1|0
+  const p = new URLSearchParams(location.search);
+  const m = parseInt(p.get('m') || '10', 10);
+  const sOverride = parseInt(p.get('s') || '0', 10);
+  const totalSeconds = Number.isFinite(sOverride) && sOverride > 0 ? sOverride : m * 60;
+  const doBeep = (p.get('beep') ?? '1') !== '0';
 
-    // Elements
-    const displayEl = document.getElementById('display');
-    const statusEl  = document.getElementById('status');
-    const btnRestart= document.getElementById('restart');
-    const barFill   = document.getElementById('barfill');
-    const cardEl    = document.getElementById('card');
+  const displayEl = document.getElementById('display');
+  const statusEl  = document.getElementById('status');
+  const btn       = document.getElementById('restart');
+  const barFill   = document.getElementById('barfill');
+  const cardEl    = document.getElementById('card');
 
-    // Colours
-    const cs = getComputedStyle(document.documentElement);
-    const C = {
-      base:   cs.getPropertyValue('--ok').trim()      || '#111827',  // black-ish
-      yellow: cs.getPropertyValue('--warn').trim()    || '#f59e0b',
-      orange: cs.getPropertyValue('--orange').trim()  || '#f97316',
-      red:    cs.getPropertyValue('--danger').trim()  || '#dc2626'
-    };
+  // Neon palette (read from CSS custom properties)
+  const cs = getComputedStyle(document.documentElement);
+  const NEON = {
+    yellow: cs.getPropertyValue('--neon-yellow').trim() || '#FFEE00',
+    orange: cs.getPropertyValue('--neon-orange').trim() || '#FF6A00',
+    red:    cs.getPropertyValue('--neon-red').trim()    || '#FF0033'
+  };
 
-    // Thresholds (seconds remaining)
-    const YELLOW_AT = 7 * 60;
-    const ORANGE_AT = 5 * 60;
-    const RED_AT    = 2.5 * 60;   // 2m30s
-    const BLINK_AT  = 60;         // last minute
+  // Thresholds
+  const YELLOW_AT = 7 * 60;
+  const ORANGE_AT = 5 * 60;
+  const RED_AT    = 2.5 * 60;
+  const BLINK_AT  = 60;
 
-    let endTs, timerId, done = false;
+  let endTs, timerId, done = false;
 
-    function pad(n){ return String(n).padStart(2,'0'); }
-    function fmt(sec){
-      sec = Math.max(0, Math.floor(sec));
-      const m = Math.floor(sec / 60), s = sec % 60;
-      return `${pad(m)}:${pad(s)}`;
-    }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function fmt(sec){
+    sec = Math.max(0, Math.floor(sec));
+    const mm = Math.floor(sec / 60), ss = sec % 60;
+    return `${pad(mm)}:${pad(ss)}`;
+  }
 
-    function start() {
-      endTs = Date.now() + totalSeconds * 1000;
-      done = false;
-      statusEl.textContent = 'Running';
-      displayEl.style.color = C.base;
-      cardEl.classList.remove('blink');
-      tick(); // paint immediately
-      if (timerId) clearInterval(timerId);
-      timerId = setInterval(tick, 250);
-    }
+  function clearGlows(){
+    displayEl.classList.remove('glow-yellow','glow-orange','glow-red');
+  }
 
-    function beep(){
-      if (!doBeep) return;
-      try{
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        gain.gain.setValueAtTime(0.001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.4);
-      }catch(e){}
-    }
+  function start(){
+    endTs = Date.now() + totalSeconds * 1000;
+    done = false;
+    statusEl.textContent = 'Running';
+    cardEl.classList.remove('blink');
+    clearGlows();
+    displayEl.style.color = '#000';          // start black
+    barFill.style.background = '#000';       // neutral bar
+    tick();
+    if (timerId) clearInterval(timerId);
+    timerId = setInterval(tick, 250);
+  }
 
-    function tick(){
-      const now = Date.now();
-      let remainingMs = endTs - now;
+  function beep(){
+    if (!doBeep) return;
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.5);
+    }catch(e){}
+  }
 
-      if (remainingMs <= 0){
-        if (!done){
-          done = true;
-          displayEl.textContent = '00:00';
-          statusEl.textContent = 'Completed';
-          displayEl.style.color = C.red;
-          barFill.style.width = '100%';
-          barFill.style.background = C.red;
-          cardEl.classList.remove('blink');
-          clearInterval(timerId);
-          beep();
-        }
-        return;
-      }
+  function tick(){
+    const now = Date.now();
+    let remainingMs = endTs - now;
 
-      const remainingSec = remainingMs / 1000;
-      displayEl.textContent = fmt(remainingSec);
-
-      // Progress bar (increasing fill as time elapses)
-      const elapsed = totalSeconds - remainingSec;
-      const pct = Math.min(100, Math.max(0, (elapsed / totalSeconds) * 100));
-      barFill.style.width = pct.toFixed(2) + '%';
-
-      // Colour phases for digits
-      if (remainingSec <= RED_AT) {
-        displayEl.style.color = C.red;
-      } else if (remainingSec <= ORANGE_AT) {
-        displayEl.style.color = C.orange;
-      } else if (remainingSec <= YELLOW_AT) {
-        displayEl.style.color = C.yellow;
-      } else {
-        displayEl.style.color = C.base;
-      }
-
-      // Blink whole card in last minute
-      if (remainingSec <= BLINK_AT) {
-        cardEl.classList.add('blink');
-      } else {
+    if (remainingMs <= 0){
+      if (!done){
+        done = true;
+        displayEl.textContent = '00:00';
+        statusEl.textContent = 'Completed';
+        clearInterval(timerId);
         cardEl.classList.remove('blink');
+        clearGlows();
+        displayEl.style.color = NEON.red;
+        displayEl.classList.add('glow-red');
+        barFill.style.width = '100%';
+        barFill.style.background = NEON.red;
+        beep();
       }
-
-      // Match bar colour to phase
-      if (remainingSec <= RED_AT) {
-        barFill.style.background = C.red;
-      } else if (remainingSec <= ORANGE_AT) {
-        barFill.style.background = C.orange;
-      } else if (remainingSec <= YELLOW_AT) {
-        barFill.style.background = C.yellow;
-      } else {
-        barFill.style.background = C.base;
-      }
+      return;
     }
 
-    // UI wiring
-    btnRestart.addEventListener('click', start);
+    const remainingSec = remainingMs / 1000;
+    displayEl.textContent = fmt(remainingSec);
 
-    // Auto-start
-    start();
+    // Progress bar (fill increases with elapsed)
+    const elapsed = totalSeconds - remainingSec;
+    const pct = Math.min(100, Math.max(0, (elapsed / totalSeconds) * 100));
+    barFill.style.width = pct.toFixed(2) + '%';
 
-    // Clean up
-    window.addEventListener('beforeunload', () => { if (timerId) clearInterval(timerId); });
-  })();
-  </script>
+    // Number colour phases (neon)
+    clearGlows();
+    if (remainingSec <= RED_AT){
+      displayEl.style.color = NEON.red;
+      displayEl.classList.add('glow-red');
+      barFill.style.background = NEON.red;
+    } else if (remainingSec <= ORANGE_AT){
+      displayEl.style.color = NEON.orange;
+      displayEl.classList.add('glow-orange');
+      barFill.style.background = NEON.orange;
+    } else if (remainingSec <= YELLOW_AT){
+      displayEl.style.color = NEON.yellow;
+      displayEl.classList.add('glow-yellow');
+      barFill.style.background = NEON.yellow;
+    } else {
+      displayEl.style.color = '#000';         // black early
+      barFill.style.background = '#000';
+    }
+
+    // Intense red strobe last minute
+    if (remainingSec <= BLINK_AT){
+      cardEl.classList.add('blink');
+    } else {
+      cardEl.classList.remove('blink');
+    }
+  }
+
+  btn.addEventListener('click', start);
+  start();
+  window.addEventListener('beforeunload', () => { if (timerId) clearInterval(timerId); });
+})();
+</script>
 </body>
 </html>
-
